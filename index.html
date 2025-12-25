@@ -231,6 +231,9 @@
       document.getElementById("authorControls").style.display =
         isEdit ? "flex" : "none";
       document.querySelector(".authorTip").style.display = isEdit ? "block" : "none";
+      
+      requestAnimationFrame(render);
+
     }
 
     function fitBoxToViewport(){
@@ -238,8 +241,15 @@
       imgbox.style.maxHeight = maxH + "px";
     }
 
-    refImg.addEventListener("load", fitBoxToViewport);
-    window.addEventListener("resize", fitBoxToViewport);
+    refImg.addEventListener("load", () => {
+      fitBoxToViewport();
+      render(); // <- IMPORTANT: re-place hotspots using final image size
+    });
+
+    window.addEventListener("resize", () => {
+      fitBoxToViewport();
+      render();
+    });
 
 
     function render(){
@@ -438,6 +448,7 @@
   </script>
 </body>
 </html>
+
 
 
 
