@@ -1,5 +1,5 @@
 {
-  "imageUrl": "https://i.pinimg.com/736x/12/04/d4/1204d449ede85ce291f3c3d805bfd95f.jpg",
+  "imageUrl": "./ref.jpg",
   "hotspots": [
     {
       "id": "2af6dba0",
@@ -26,4 +26,5 @@
       "shape": "dot"
     }
   ]
+
 }
