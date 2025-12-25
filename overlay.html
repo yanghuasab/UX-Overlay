@@ -1,0 +1,427 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Research Reference Overlay</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: #fff; }
+    .wrap { padding: 16px; max-width: 980px; margin: 0 auto; }
+    .card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.06); }
+    .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; }
+    .btn { border: 1px solid #d1d5db; background:#fff; padding: 8px 10px; border-radius: 10px; cursor:pointer; }
+    .btn.primary { border-color:#2563eb; color:#2563eb; }
+
+    /* The viewport box */
+    .imgbox{
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      background:#fff;
+      width: 100%;
+      height: calc(100vh - 170px);
+      max-height: calc(100vh - 170px);
+
+      /* Center the image stage to avoid “whitespace clicks” */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Stage that matches the rendered image area */
+    .imageStage{
+      position: relative;     /* hotspots anchor to this */
+      height: 100%;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Make image keep aspect ratio; it will create letterboxing INSIDE imageStage, but we ignore clicks there */
+    .imageStage img{
+      height: 100%;
+      width: auto;
+      max-width: 100%;
+      max-height: 100%;
+      display:block;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    @media (max-width: 640px) {
+      .wrap{padding: 10px;}
+      .imgbox { height: calc(100vh - 220px); max-height: none;}
+    }
+
+    /* Hotspots are positioned relative to imageStage (not the whole card) */
+    .hotspot {
+      position:absolute;
+      transform: translate(-50%,-50%);
+      width: 14px; height: 14px; border-radius: 999px;
+      background:#2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.18);
+      cursor:pointer;
+    }
+    .hotspot[data-edit="true"] { outline: 2px solid rgba(0,0,0,.35); }
+
+    .popTitle { font-size: 20px; font-weight: 650; text-align: center; margin: 6px 0 14px; }
+    .form { display:flex; flex-direction:column; gap:14px; }
+    .fieldGroup { display:flex; flex-direction:column; gap:8px; }
+    .fieldLabel { font-size: 12px; padding-left: 2px; color:#6b7280; }
+    .popover {
+      position: fixed;
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.12);
+      width: 280px;
+      z-index: 9999;
+    }
+
+    .row { display:flex; gap:8px; margin-top:8px; }
+
+    .field{
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.4;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-weight: 400;
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.04);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    input.field::placeholder,
+    textarea.field::placeholder{
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      font-weight: 400;
+      color: #9ca3af;
+      opacity: 1;
+    }
+
+    .field:focus {
+      outline: none;
+      border-color: rgba(37,99,235,0.35);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.15), inset 0 1px 2px rgba(0,0,0,.04);
+    }
+
+    .actions{display:flex; justify-content:space-between; align-items:center; margin-top:14px;}
+    .actionsRight{display:flex; gap:10px;}
+    .small { font-size: 12px; color:#6b7280; }
+
+    textarea.field{
+      resize: none;
+      min-height: 120px;
+      scrollbar-width: none;
+    }
+    textarea.field::-webkit-scrollbar{ width:0; height:0; }
+
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="topbar">
+        <div><strong>Reference Material</strong> <span class="small" id="modeLabel"></span></div>
+        <div class="row" id="authorControls">
+          <button class="btn" id="setImage">Set Image</button>
+          <button class="btn" id="toggleEdit">Authoring: Off</button>
+          <button class="btn primary" id="exportJson">Export JSON</button>
+          <button class="btn" id="importJson">Import JSON</button>
+        </div>
+      </div>
+
+      <div class="imgbox" id="imgbox">
+        <div class="imageStage" id="imageStage">
+          <img id="refImg" alt="reference" />
+        </div>
+      </div>
+
+      <p class="small authorTip" style="margin-top:10px">
+        Tip: In Authoring mode, click to add hotspots. Drag to reposition.
+      </p>
+    </div>
+  </div>
+
+  <div class="popover hidden" id="popover">
+    <div class="popTitle">Hotspot</div>
+
+    <div class="form">
+      <div class="fieldGroup">
+        <div class="fieldLabel">Label</div>
+        <input class="field" id="hsLabel" placeholder="Your Target" maxlength="20"/>
+      </div>
+
+      <div class="fieldGroup">
+        <div class="fieldLabel">Note</div>
+        <textarea class="field" id="hsNote" placeholder="Enter details…" maxlength="60"></textarea>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="deleteHs">Delete</button>
+      <div class="actionsRight">
+        <button class="btn primary" id="saveHs">Save</button>
+        <button class="btn" id="closePop">Close</button>
+      </div>
+    </div>
+
+    <div class="small" id="countInfo" style="margin-top:8px"></div>
+  </div>
+
+  <script>
+    // ---- Config (replace imageUrl + hotspots) ----
+    let config = {
+      imageUrl: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1200&q=80",
+      hotspots: []
+    };
+
+    // ---- State ----
+    let isEdit = new URLSearchParams(window.location.search).get("edit") === "1";
+    let activeId = null;
+    let dragId = null;
+
+    const imgbox = document.getElementById('imgbox');
+    const imageStage = document.getElementById('imageStage');
+    const refImg = document.getElementById('refImg');
+
+    const setImage = document.getElementById('setImage');
+    const toggleEdit = document.getElementById('toggleEdit');
+    const exportJson = document.getElementById('exportJson');
+    const importJson = document.getElementById('importJson');
+
+    const pop = document.getElementById('popover');
+    const hsLabel = document.getElementById('hsLabel');
+    const hsNote = document.getElementById('hsNote');
+    const saveHs = document.getElementById('saveHs');
+    const deleteHs = document.getElementById('deleteHs');
+    const closePop = document.getElementById('closePop');
+    const modeLabel = document.getElementById('modeLabel');
+    const countInfo = document.getElementById('countInfo');
+
+    function uid() { return Math.random().toString(16).slice(2, 10); }
+    function clamp01(n){ return Math.min(1, Math.max(0, n)); }
+
+    function setModeLabel(){
+      modeLabel.textContent = isEdit ? "(Authoring mode)" : "";
+      toggleEdit.textContent = isEdit ? "Authoring: On" : "Authoring: Off";
+
+      document.getElementById("authorControls").style.display =
+        isEdit ? "flex" : "none";
+      document.querySelector(".authorTip").style.display = isEdit ? "block" : "none";
+    }
+
+    function fitBoxToViewport(){
+      const maxH = window.innerHeight - 170;
+      imgbox.style.maxHeight = maxH + "px";
+    }
+
+    refImg.addEventListener("load", fitBoxToViewport);
+    window.addEventListener("resize", fitBoxToViewport);
+
+
+    function render(){
+      imageStage.querySelectorAll('.hotspot').forEach(n => n.remove());
+
+      config.hotspots.forEach(h => {
+        const el = document.createElement('div');
+        el.className = 'hotspot';
+        const { stageRect, imgRect } = getStageAndImageRects();
+        el.style.left = ((imgRect.left - stageRect.left) + h.x * imgRect.width) + "px";
+        el.style.top  = ((imgRect.top  - stageRect.top ) + h.y * imgRect.height) + "px";
+
+        el.title = h.label || '';
+        el.dataset.id = h.id;
+        el.dataset.edit = isEdit ? "true" : "false";
+
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEditor(h.id, e.clientX, e.clientY);
+        });
+
+        el.addEventListener('mousedown', (e) => {
+          if (!isEdit) return;
+          dragId = h.id;
+          e.preventDefault();
+          e.stopPropagation();
+        });
+
+        imageStage.appendChild(el);
+      });
+    }
+
+    function positionPopoverAtHotspot(hs){
+      const imgRect = getImageRect();
+
+      const xPx = hs.x * imgRect.width;
+      const yPx = hs.y * imgRect.height;
+
+      const popW = pop.offsetWidth || 280;
+      const popH = pop.offsetHeight || 260;
+
+      let left = imgRect.left + xPx + 14;
+      let top  = imgRect.top  + yPx + 14;
+
+      const pad = 10;
+      left = Math.min(left, window.innerWidth - popW - pad);
+      left = Math.max(left, pad);
+      top  = Math.min(top, window.innerHeight - popH - pad);
+      top  = Math.max(top, pad);
+
+      pop.style.left = `${left}px`;
+      pop.style.top  = `${top}px`;
+    }
+
+    function openEditor(id, x, y){
+      activeId = id;
+      const h = config.hotspots.find(h => h.id === id);
+      hsLabel.value = h?.label ?? "";
+      hsNote.value = h?.note ?? "";
+      pop.style.left = Math.min(window.innerWidth - 280, x + 12) + 'px';
+      pop.style.top  = Math.min(window.innerHeight - 200, y + 12) + 'px';
+      pop.classList.remove('hidden');
+      updateCount();
+    }
+
+    function getImageRect(){
+      return refImg.getBoundingClientRect();
+    }
+
+    function getStageAndImageRects(){
+      const stageRect = imageStage.getBoundingClientRect();
+      const imgRect = refImg.getBoundingClientRect();
+      return { stageRect, imgRect };
+    }
+
+
+    function closeEditor(){
+      activeId = null;
+      pop.classList.add('hidden');
+    }
+
+    function updateCount(){
+      countInfo.textContent = `Label: ${hsLabel.value.length}/20 • Note: ${hsNote.value.length}/60`;
+    }
+
+    hsLabel.addEventListener('input', updateCount);
+    hsNote.addEventListener('input', updateCount);
+
+    // Add hotspot only when clicking ON THE IMAGE (not whitespace)
+    refImg.addEventListener('click', (e) => {
+      if (!isEdit) return;
+
+      const r = getImageRect();
+      const x = clamp01((e.clientX - r.left) / r.width);
+      const y = clamp01((e.clientY - r.top) / r.height);
+
+      const id = uid();
+      config.hotspots.push({ id, x, y, label: "", note: "", shape:"dot" });
+      render();
+      openEditor(id, e.clientX, e.clientY);
+    });
+
+    // Drag reposition (edit only) — relative to image rect
+    window.addEventListener('mousemove', (e) => {
+      
+      if (!isEdit || !dragId) return;
+      const r = getImageRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+
+      // clamp mouse to the image edges
+      const cx = Math.min(r.right, Math.max(r.left, e.clientX));
+      const cy = Math.min(r.bottom, Math.max(r.top, e.clientY));
+
+      const x = clamp01((cx - r.left) / r.width);
+      const y = clamp01((cy - r.top) / r.height);
+      const h = config.hotspots.find(h => h.id === dragId);
+      if (h){
+        h.x = x; h.y = y;
+        render();
+        if (activeId === h.id && !pop.classList.contains('hidden')) {
+          positionPopoverAtHotspot(h);
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (dragId && activeId === dragId) {
+        const h = config.hotspots.find(h => h.id === dragId);
+        if (h && !pop.classList.contains('hidden')) positionPopoverAtHotspot(h);
+      }
+      dragId = null;
+    });
+
+    toggleEdit.addEventListener('click', () => {
+      isEdit = !isEdit;
+      setModeLabel();
+      render();
+      closeEditor();
+    });
+
+    setImage.addEventListener('click', () => {
+      const url = prompt(
+        "Paste an image URL (must start with https://) or use the default image:",
+        config.imageUrl
+      );
+      if (!url) return;
+      config.imageUrl = url.trim();
+      refImg.src = config.imageUrl;
+    });
+
+    saveHs.addEventListener('click', () => {
+      const h = config.hotspots.find(h => h.id === activeId);
+      if (!h) return;
+      h.label = hsLabel.value.trim();
+      h.note  = hsNote.value.trim();
+      render();
+      closeEditor();
+    });
+
+    deleteHs.addEventListener('click', () => {
+      config.hotspots = config.hotspots.filter(h => h.id !== activeId);
+      render();
+      closeEditor();
+    });
+
+    closePop.addEventListener('click', closeEditor);
+
+    exportJson.addEventListener('click', async () => {
+      const text = JSON.stringify(config, null, 2);
+      await navigator.clipboard.writeText(text);
+      alert("Config JSON copied to clipboard.");
+    });
+
+    importJson.addEventListener('click', () => {
+      const text = prompt("Paste config JSON:");
+      if (!text) return;
+      try{
+        const obj = JSON.parse(text);
+        if (!obj.imageUrl || !Array.isArray(obj.hotspots)) throw new Error("Bad format");
+        config = obj;
+        refImg.src = config.imageUrl;
+        closeEditor();
+        render();
+      }catch(e){
+        alert("Invalid JSON.");
+      }
+    });
+
+    // Init
+    refImg.src = config.imageUrl;
+    setModeLabel();
+    render();
+  </script>
+</body>
+</html>
+
+
