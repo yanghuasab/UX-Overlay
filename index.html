@@ -423,6 +423,8 @@ function closeViewer(){
     });
 
     toggleEdit.addEventListener('click', () => {
+      const urlIsAuthor = new URLSearchParams(window.location.search).get("edit") === "1";
+      if (!urlIsAuthor) return;
       isEdit = !isEdit;
       setModeLabel();
       render();
@@ -489,6 +491,7 @@ function closeViewer(){
   </script>
 </body>
 </html>
+
 
 
 
