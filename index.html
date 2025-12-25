@@ -161,7 +161,15 @@
         <div class="fieldLabel">Label</div>
         <input class="field" id="hsLabel" placeholder="Your Target" maxlength="20"/>
       </div>
-
+      
+  <div class="popover hidden" id="viewerPop">
+    <div class="popTitle" id="viewerTitle"></div>
+    <div class="small" id="viewerNote" style="margin-top:8px; white-space:pre-wrap;"></div>
+    <div class="actions" style="justify-content:flex-end;">
+      <button class="btn" id="closeViewerPop">Close</button>
+    </div>
+  </div>
+      
       <div class="fieldGroup">
         <div class="fieldLabel">Note</div>
         <textarea class="field" id="hsNote" placeholder="Enter details…" maxlength="60"></textarea>
@@ -213,6 +221,10 @@
     const importJson = document.getElementById('importJson');
 
     const pop = document.getElementById('popover');
+    const viewerPop = document.getElementById('viewerPop');
+    const viewerTitle = document.getElementById('viewerTitle');
+    const viewerNote = document.getElementById('viewerNote');
+    const closeViewerPop = document.getElementById('closeViewerPop');
     const hsLabel = document.getElementById('hsLabel');
     const hsNote = document.getElementById('hsNote');
     const saveHs = document.getElementById('saveHs');
@@ -225,7 +237,8 @@
     function clamp01(n){ return Math.min(1, Math.max(0, n)); }
 
     function setModeLabel(){
-      if (!isEdit) closeEditor();
+      closeEditor();
+      closeViewer();
       modeLabel.textContent = isEdit ? "(Authoring mode)" : "";
       toggleEdit.textContent = isEdit ? "Authoring: On" : "Authoring: Off";
 
@@ -255,6 +268,7 @@
       render();
     });
 
+    
 
     function render(){
       imageStage.querySelectorAll('.hotspot').forEach(n => n.remove());
@@ -272,8 +286,11 @@
 
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (!isEdit) return;  
-          openEditor(h.id, e.clientX, e.clientY);
+          if (isEdit) {
+            openEditor(h.id, e.clientX, e.clientY);
+          } else {
+            openViewer(h.id, e.clientX, e.clientY);
+          }
         });
 
         el.addEventListener('mousedown', (e) => {
@@ -320,7 +337,22 @@
       pop.classList.remove('hidden');
       updateCount();
     }
+    
+    function openViewer(id, x, y){
+      const h = config.hotspots.find(h => h.id === id);
+      if (!h) return;
+    
+      viewerTitle.textContent = h.label || "Hotspot";
+      viewerNote.textContent = h.note || "";
+    
+      viewerPop.style.left = Math.min(window.innerWidth - 280, x + 12) + 'px';
+      viewerPop.style.top  = Math.min(window.innerHeight - 200, y + 12) + 'px';
+      viewerPop.classList.remove('hidden');
+    }
 
+function closeViewer(){
+  viewerPop.classList.add('hidden');
+}
     function getImageRect(){
       return refImg.getBoundingClientRect();
     }
@@ -422,6 +454,8 @@
     });
 
     closePop.addEventListener('click', closeEditor);
+    
+    closeViewerPop.addEventListener('click', closeViewer);
 
     exportJson.addEventListener('click', async () => {
       const text = JSON.stringify(config, null, 2);
@@ -454,6 +488,7 @@
   </script>
 </body>
 </html>
+
 
 
 
