@@ -162,14 +162,6 @@
         <input class="field" id="hsLabel" placeholder="Your Target" maxlength="20"/>
       </div>
       
-  <div class="popover hidden" id="viewerPop">
-    <div class="popTitle" id="viewerTitle"></div>
-    <div class="small" id="viewerNote" style="margin-top:8px; white-space:pre-wrap;"></div>
-    <div class="actions" style="justify-content:flex-end;">
-      <button class="btn" id="closeViewerPop">Close</button>
-    </div>
-  </div>
-      
       <div class="fieldGroup">
         <div class="fieldLabel">Note</div>
         <textarea class="field" id="hsNote" placeholder="Enter details…" maxlength="60"></textarea>
@@ -187,6 +179,14 @@
     <div class="small" id="countInfo" style="margin-top:8px"></div>
   </div>
 
+    <div class="popover hidden" id="viewerPop">
+      <div class="popTitle" id="viewerTitle"></div>
+      <div class="small" id="viewerNote" style="margin-top:8px; white-space:pre-wrap;"></div>
+      <div class="actions" style="justify-content:flex-end;">
+      <button class="btn" id="closeViewerPop">Close</button>
+    </div>
+  </div>
+  
   <script>
     // ---- Config (replace imageUrl + hotspots) ----
     let config = {
@@ -339,6 +339,7 @@
     }
     
     function openViewer(id, x, y){
+      closeEditor();
       const h = config.hotspots.find(h => h.id === id);
       if (!h) return;
     
@@ -488,6 +489,7 @@ function closeViewer(){
   </script>
 </body>
 </html>
+
 
 
 
