@@ -225,6 +225,7 @@
     function clamp01(n){ return Math.min(1, Math.max(0, n)); }
 
     function setModeLabel(){
+      if (!isEdit) closeEditor();
       modeLabel.textContent = isEdit ? "(Authoring mode)" : "";
       toggleEdit.textContent = isEdit ? "Authoring: On" : "Authoring: Off";
 
@@ -233,7 +234,10 @@
       document.querySelector(".authorTip").style.display = isEdit ? "block" : "none";
       
       requestAnimationFrame(render);
-
+      hsLabel.disabled = !isEdit;
+      hsNote.disabled = !isEdit;
+      saveHs.disabled = !isEdit;
+      deleteHs.disabled = !isEdit;
     }
 
     function fitBoxToViewport(){
@@ -306,6 +310,7 @@
     }
 
     function openEditor(id, x, y){
+      if (!isEdit) return;
       activeId = id;
       const h = config.hotspots.find(h => h.id === id);
       hsLabel.value = h?.label ?? "";
@@ -449,6 +454,7 @@
   </script>
 </body>
 </html>
+
 
 
 
